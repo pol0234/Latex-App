@@ -1,4 +1,4 @@
-# LatexApp
+# Latex-App
 
 **LatexApp** is a lightweight utility designed to convert AI-generated text and LaTeX mathematical expressions (such as outputs from ChatGPT) into clean, native, and easily readable Microsoft Word formatting. 
 
