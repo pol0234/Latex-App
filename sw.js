@@ -1,4 +1,4 @@
-const CACHE_NAME = 'latex2word-v1';
+const CACHE_NAME = 'latex2word-v2';
 const urlsToCache = [
   './',
   './index.html',
@@ -24,5 +24,13 @@ self.addEventListener('fetch', event => {
         // Ak je súbor v cachi (offline), vráť ho, inak ho stiahni z netu
         return response || fetch(event.request);
       })
+  );
+});
+self.addEventListener('activate', event => {
+  // Zmaž staré verzie cache, aby sa nový vzhľad dostal ku všetkým
+  event.waitUntil(
+    caches.keys().then(keys => Promise.all(
+      keys.filter(key => key !== CACHE_NAME).map(key => caches.delete(key))
+    ))
   );
 });
