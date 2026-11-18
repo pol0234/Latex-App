@@ -3,8 +3,8 @@
   "short_name": "LaTeX2Word",
   "start_url": "./index.html",
   "display": "standalone",
-  "background_color": "#111113",
-  "theme_color": "#18181b",
+  "background_color": "#161c1a",
+  "theme_color": "#161c1a",
   "description": "Nástroj na prenos Gemini vzorcov do Wordu",
   "icons": [
     {

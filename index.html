@@ -1,13 +1,14 @@
 <!DOCTYPE html>
-<html lang="sk">
+<html lang="sk" data-radius="sharp" data-buttons="pill">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>LaTeX & Markdown Viewer for Word</title>
+<title>LaTeX Viewer · vzorce z AI do Wordu</title>
+<meta name="description" content="Vlož odpoveď z ChatGPT, Gemini alebo Clauda, skontroluj vykreslené vzorce a skopíruj ich do Wordu ako natívne rovnice.">
 
 <!-- PWA META TAGY -->
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#18181b">
+<meta name="theme-color" content="#161c1a">
 <link rel="apple-touch-icon" href="icon-192.png">
 
 <!-- KaTeX -->
@@ -15,224 +16,306 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js"></script>
 
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400..600&family=Geist+Mono:wght@400..500&display=swap" rel="stylesheet">
 
 <style>
+/* deal: palette green-black-bone (a quiet near-black desk with a pale green pencil accent,
+   so the paper page is the brightest thing on screen), type geist, radius sharp, buttons pill, mark wordmark */
 :root {
-  /* graphite ramp */
-  --bg: #111113;
-  --surface: #18181b;
-  --raised: #202024;
-  --line: rgba(232, 230, 224, 0.08);
-  --line-hi: rgba(232, 230, 224, 0.14);
-  --text: #e8e6e0;
-  --text-2: #a3a1a9;
-  --text-3: #7c7a83;
+  --p-bg: #161c1a; --p-surface: #1f2725; --p-ink: #e3e2da; --p-muted: #8e948d;
+  --p-accent: #9fc7b8; --p-accent-ink: #161c1a;
+  --p-inv-bg: #e3e2da; --p-inv-ink: #161c1a; --p-inv-muted: #555a55;
 
-  /* one accent: ink blue */
-  --accent: #8fb0ff;
+  --raised: #262f2c;
+  --sunk: #121715;
+  --line: rgba(227, 226, 218, 0.08);
+  --line-hi: rgba(227, 226, 218, 0.15);
+  --ink-2: #b9bab2;
 
-  /* semantic, toned down */
-  --ok: #7fbf8e;
-  --wait: #d6b46a;
-  --err: #e08a80;
+  --ok: #9fc7b8;
+  --wait: #d8bf7e;
+  --err: #e39a8c;
 
-  /* paper */
-  --paper: #fbfaf7;
-  --paper-ink: #1d1d1f;
-  --paper-ink-2: #5b5a60;
-  --paper-line: rgba(29, 29, 31, 0.1);
-  --paper-accent: #2f56c4;
+  --paper: #f1f0ea;
+  --paper-ink: #161c1a;
+  --paper-muted: #6a6f6a;
+  --paper-line: rgba(22, 28, 26, 0.12);
+  --paper-accent: #2c6b57;
 
-  --mono: 'JetBrains Mono', ui-monospace, monospace;
-  --sans: 'DM Sans', system-ui, sans-serif;
+  --font-text: "Geist", system-ui, sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
 
-  --ease: cubic-bezier(0.2, 0, 0, 1);
-  --fast: 120ms;
-  --slow: 200ms;
+  --r-sm: 4px; --r-md: 6px; --r-lg: 8px; --r-pill: 999px;
+
+  --ease: cubic-bezier(.2, .8, .2, 1);
+  --m-in: 150ms; --m-out: 120ms; --m-press: 90ms; --m-panel: 200ms;
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html, body { height: 100%; overflow: hidden; }
 body {
-  background: var(--bg); color: var(--text); font-family: var(--sans);
+  background: var(--p-bg); color: var(--p-ink); font-family: var(--font-text);
   display: flex; flex-direction: column; height: 100dvh;
-  -webkit-font-smoothing: antialiased;
+  -webkit-font-smoothing: antialiased; font-feature-settings: "ss01";
 }
-::selection { background: rgba(143, 176, 255, 0.28); }
+::selection { background: rgba(159, 199, 184, 0.3); }
 
 /* ---------- top bar ---------- */
 .topbar {
-  height: 56px; flex-shrink: 0; display: flex; align-items: center; gap: 8px;
-  padding: 0 16px 0 24px; background: var(--surface); border-bottom: 1px solid var(--line);
+  height: 60px; flex-shrink: 0; display: flex; align-items: center; gap: 12px;
+  padding: 0 20px;
 }
-.logo { font-size: 15px; font-weight: 500; color: var(--text); letter-spacing: 0; }
+.logo { display: flex; align-items: baseline; gap: 10px; font-size: inherit; font-weight: 400; color: var(--p-ink); }
+.logo-word { font-size: 17px; font-weight: 500; letter-spacing: -0.02em; }
+.logo-word b { font-weight: 500; color: var(--p-accent); }
+.logo-sub { font-size: 13px; color: var(--p-muted); }
 .topbar-spacer { flex: 1; }
+
+/* buttons: pill; hover steps 1px up and 14% toward ink, press sinks and scales .985 */
 .btn {
-  height: 32px; padding: 0 12px; display: inline-flex; align-items: center; gap: 8px;
-  font-family: var(--sans); font-size: 13px; font-weight: 500;
-  border: 1px solid transparent; border-radius: 8px; background: transparent; color: var(--text-2);
+  height: 36px; padding: 0 16px; display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  font-family: var(--font-text); font-size: 14px; font-weight: 500; white-space: nowrap;
+  border-radius: var(--r-pill); border: 1px solid var(--line-hi); background: transparent; color: var(--p-ink);
   cursor: pointer;
-  transition: background-color var(--fast) var(--ease), color var(--fast) var(--ease), transform var(--fast) var(--ease);
+  transition: background-color var(--m-out) var(--ease), border-color var(--m-out) var(--ease), color var(--m-out) var(--ease), transform var(--m-out) var(--ease);
 }
-.btn svg { width: 16px; height: 16px; stroke-width: 1.5; flex-shrink: 0; }
-.btn:hover { background: var(--raised); color: var(--text); }
-.btn:active { transform: scale(0.98); }
-.btn.primary { background: var(--text); color: #141416; }
-.btn.primary:hover { background: #ffffff; }
-.btn:focus-visible, .divider:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.btn svg { width: 16px; height: 16px; flex-shrink: 0; }
+.btn--primary { background: var(--p-accent); color: var(--p-accent-ink); border-color: var(--p-accent); }
+.btn--quiet { border-color: transparent; color: var(--ink-2); }
+.btn--sm { height: 32px; padding: 0 12px; font-size: 13px; }
+@media (hover: hover) and (pointer: fine) {
+  .btn:hover { transition-duration: var(--m-in); transform: translateY(-1px); background: rgba(227, 226, 218, 0.06); border-color: rgba(227, 226, 218, 0.28); }
+  .btn--quiet:hover { border-color: transparent; color: var(--p-ink); }
+  .btn--primary:hover { background: color-mix(in srgb, var(--p-accent) 86%, var(--p-ink)); border-color: color-mix(in srgb, var(--p-accent) 86%, var(--p-ink)); }
+}
+.btn:active { transition-duration: var(--m-press); transform: translateY(1px) scale(.985); }
+:focus-visible { outline: 2px solid var(--p-accent); outline-offset: 2px; }
 
-/* ---------- workspace ---------- */
-.workspace { flex: 1; display: flex; overflow: hidden; min-height: 0; }
-.pane { flex: 1; display: flex; flex-direction: column; min-width: 0; min-height: 0; }
-.pane-header {
-  height: 40px; flex-shrink: 0; display: flex; align-items: center; gap: 8px;
-  padding: 0 24px; border-bottom: 1px solid var(--line);
+/* copy button: glyph swaps to a check in place */
+.btn .ico-swap { position: relative; width: 16px; height: 16px; }
+.btn .ico-swap svg { position: absolute; inset: 0; transition: opacity var(--m-in) var(--ease), transform var(--m-in) var(--ease); }
+.btn .ico-check { opacity: 0; transform: scale(.7); }
+.btn.is-done .ico-copy { opacity: 0; transform: scale(.7); }
+.btn.is-done .ico-check { opacity: 1; transform: none; }
+
+/* ---------- workspace: two panels on the desk ---------- */
+.workspace {
+  flex: 1; min-height: 0; display: flex; gap: 0; padding: 0 12px;
+  animation: enter 420ms var(--ease) both;
 }
-#paneLeft .pane-header { background: var(--bg); }
-#paneRight .pane-header { background: var(--surface); }
-.pane-label { font-size: 13px; font-weight: 500; color: var(--text-2); }
-.pane-meta { margin-left: auto; display: flex; align-items: center; gap: 4px; }
+@keyframes enter { from { opacity: 0; transform: translateY(8px); } }
+.panel {
+  flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column;
+  background: var(--p-surface); border: 1px solid var(--line); border-radius: var(--r-lg); overflow: hidden;
+}
+.panel-head {
+  height: 48px; flex-shrink: 0; display: flex; align-items: center; gap: 10px;
+  padding: 0 8px 0 16px; border-bottom: 1px solid var(--line);
+}
+.panel-title { font-size: 14px; font-weight: 500; color: var(--p-ink); }
+.panel-hint { font-family: var(--font-mono); font-size: 12px; color: var(--p-muted); }
+.panel-tools { margin-left: auto; display: flex; align-items: center; gap: 4px; }
+
 kbd {
-  height: 20px; min-width: 20px; padding: 0 6px; display: inline-flex; align-items: center; justify-content: center;
-  font-family: var(--mono); font-size: 11px; color: var(--text-3);
-  background: var(--raised); border: 1px solid var(--line); border-bottom-color: var(--line-hi); border-radius: 4px;
+  height: 22px; min-width: 22px; padding: 0 6px; display: inline-flex; align-items: center; justify-content: center;
+  font-family: var(--font-mono); font-size: 11px; color: var(--ink-2);
+  background: var(--raised); border: 1px solid var(--line-hi); border-bottom-width: 2px; border-radius: var(--r-sm);
 }
 
-/* render state dot (signature) */
-.state-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--text-3); transition: background-color var(--slow) var(--ease); }
-[data-state="pending"] .state-dot, .state-dot[data-state="pending"] { background: var(--wait); }
-[data-state="ok"] .state-dot, .state-dot[data-state="ok"] { background: var(--ok); }
-[data-state="error"] .state-dot, .state-dot[data-state="error"] { background: var(--err); }
+/* render state dot */
+.state-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--p-muted); flex-shrink: 0; transition: background-color var(--m-panel) var(--ease), box-shadow var(--m-panel) var(--ease); }
+.state-dot[data-state="pending"] { background: var(--wait); }
+.state-dot[data-state="ok"] { background: var(--ok); box-shadow: 0 0 0 3px rgba(159, 199, 184, 0.16); }
+.state-dot[data-state="error"] { background: var(--err); box-shadow: 0 0 0 3px rgba(227, 154, 140, 0.16); }
 
-/* ---------- input ---------- */
+/* ---------- input: the source ---------- */
+.input-wrap { position: relative; flex: 1; min-height: 0; display: flex; background: var(--sunk); }
 .input-area {
-  flex: 1; overflow-y: auto; padding: 24px; background: var(--bg);
-  font-family: var(--sans); font-size: 15px; line-height: 1.75; color: var(--text);
-  white-space: pre-wrap; outline: none;
+  flex: 1; overflow-y: auto; padding: 24px 24px 48px;
+  font-family: var(--font-mono); font-size: 13.5px; line-height: 1.8; color: var(--ink-2);
+  white-space: pre-wrap; word-break: break-word; outline: none; caret-color: var(--p-accent);
 }
-.input-area:empty:before { content: attr(data-placeholder); color: var(--text-3); pointer-events: none; }
-.input-area h1 { font-size: 22px; font-weight: 600; margin: 0 0 16px; }
-.input-area h2 { font-size: 18px; font-weight: 500; margin: 24px 0 8px; }
+.input-area h1, .input-area h2, .input-area h3 { font-family: var(--font-mono); font-weight: 500; color: var(--p-ink); line-height: 1.5; }
+.input-area h1 { font-size: 17px; margin: 0 0 16px; }
+.input-area h2 { font-size: 15px; margin: 24px 0 8px; }
+.input-area h3 { font-size: 14px; margin: 20px 0 8px; }
 .input-area p { margin-bottom: 12px; }
-.input-area ul, .input-area ol { margin: 0 0 12px 24px; padding-left: 16px; }
+.input-area ul, .input-area ol { margin: 0 0 12px 8px; padding-left: 16px; }
+.input-area > :first-child { margin-top: 0; }
+.input-area * { color: inherit !important; background-color: transparent !important; font-family: inherit !important; }
 
-/* ---------- preview: paper ---------- */
-.preview { flex: 1; overflow-y: auto; background: var(--surface); padding: 32px; }
-.output-area {
-  max-width: 760px; min-height: 100%; margin: 0 auto; padding: 56px 64px;
-  background: var(--paper); color: var(--paper-ink); border-radius: 4px;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.25);
-  font-family: var(--sans); font-size: 15px; line-height: 1.75; white-space: pre-wrap;
+.input-empty {
+  position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 20px; padding: 24px; text-align: center; pointer-events: none;
+  transition: opacity var(--m-panel) var(--ease);
 }
-/* pasted text often carries the chat's dark-theme colors; keep the page readable */
-.output-area *:not(.katex *) { color: inherit !important; background-color: transparent !important; }
-.output-area .katex { color: var(--paper-ink); font-size: 1.1em; }
-.output-area .katex-display { margin: 20px 0; padding: 4px 0; overflow-x: auto; overflow-y: hidden; white-space: normal; }
-.output-area .katex-error { color: #b4382c !important; border-bottom: 1px dashed currentColor; }
-.output-area h1 { font-size: 24px; font-weight: 600; line-height: 1.3; margin: 0 0 20px; }
-.output-area h2 { font-size: 19px; font-weight: 600; line-height: 1.35; margin: 32px 0 12px; }
-.output-area h3 { font-size: 16px; font-weight: 600; margin: 24px 0 8px; }
-.output-area p { margin-bottom: 12px; }
-.input-area > :first-child, .output-area > :first-child { margin-top: 0; }
-.output-area ul, .output-area ol { margin: 0 0 12px 24px; padding-left: 16px; }
-.output-area a { color: var(--paper-accent) !important; }
-.output-area table { border-collapse: collapse; margin: 16px 0; white-space: normal; }
-.output-area th, .output-area td { border: 1px solid var(--paper-line); padding: 4px 8px; text-align: left; vertical-align: top; }
-.output-area code { font-family: var(--mono); font-size: 0.9em; }
-
-.empty-state {
-  height: 100%; min-height: 320px; display: flex; flex-direction: column; align-items: center; justify-content: center;
-  gap: 16px; text-align: center; white-space: normal;
-}
-.empty-formula { color: var(--paper-ink-2) !important; opacity: 0.55; font-size: 18px; }
-.empty-formula .katex { color: inherit; }
-.empty-caption { font-size: 14px; color: var(--paper-ink-2) !important; }
+.input-wrap.has-text .input-empty { opacity: 0; visibility: hidden; }
+.input-empty-keys { display: flex; align-items: center; gap: 6px; }
+.input-empty-keys kbd { height: 36px; min-width: 36px; padding: 0 12px; font-size: 14px; border-radius: var(--r-md); border-bottom-width: 3px; color: var(--p-ink); }
+.input-empty-keys span { color: var(--p-muted); font-family: var(--font-mono); font-size: 13px; }
+.input-empty-title { font-size: 18px; font-weight: 500; letter-spacing: -0.01em; color: var(--p-ink); }
+.input-empty-text { max-width: 320px; font-size: 14px; line-height: 1.6; color: var(--ink-2); }
+/* the input is focused while you paste or type: show it on the panel */
+.panel { transition: border-color var(--m-in) var(--ease); }
+.panel:focus-within { border-color: rgba(159, 199, 184, 0.45); }
+.input-area:focus-visible { outline: none; box-shadow: inset 0 0 0 2px var(--p-accent); }
+.input-empty .btn { pointer-events: auto; }
 
 /* ---------- divider ---------- */
-.divider {
-  width: 9px; margin: 0 -4px; flex-shrink: 0; position: relative; z-index: 10; cursor: col-resize; background: transparent;
-}
+.divider { width: 12px; flex-shrink: 0; position: relative; cursor: col-resize; }
 .divider::after {
-  content: ""; position: absolute; top: 0; bottom: 0; left: 4px; width: 1px; background: var(--line-hi);
-  transition: background-color var(--fast) var(--ease);
+  content: ""; position: absolute; left: 5px; top: 50%; width: 2px; height: 32px; margin-top: -16px;
+  border-radius: 1px; background: var(--line-hi); transition: background-color var(--m-in) var(--ease);
 }
-.divider:hover::after, .divider.dragging::after { background: var(--accent); }
+.divider:hover::after, .divider.dragging::after { background: var(--p-accent); }
+
+/* ---------- preview: the paper ---------- */
+.preview { flex: 1; min-height: 0; overflow-y: auto; padding: 24px; background: var(--p-surface); }
+.output-area {
+  max-width: 760px; min-height: 100%; margin: 0 auto; padding: 64px 72px 72px;
+  background: var(--paper); color: var(--paper-ink); border-radius: var(--r-sm);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.5) inset, 0 1px 2px rgba(0, 0, 0, 0.35), 0 12px 32px -8px rgba(0, 0, 0, 0.45);
+  font-family: var(--font-text); font-size: 15px; line-height: 1.75; white-space: pre-wrap;
+}
+/* pasted text often carries the chat's dark-theme colours; keep the page readable */
+.output-area *:not(.katex *) { color: inherit !important; background-color: transparent !important; }
+.output-area .katex { color: var(--paper-ink); font-size: 1.12em; }
+.output-area .katex-display {
+  margin: 20px -24px; padding: 16px 24px; overflow-x: auto; overflow-y: hidden; white-space: normal;
+  border-top: 1px solid var(--paper-line); border-bottom: 1px solid var(--paper-line);
+}
+.output-area .katex-error { color: #a8402f !important; text-decoration: underline wavy rgba(168, 64, 47, 0.6); text-underline-offset: 3px; }
+.output-area h1 { font-size: 26px; font-weight: 500; letter-spacing: -0.02em; line-height: 1.25; margin: 0 0 20px; }
+.output-area h2 { font-size: 20px; font-weight: 500; letter-spacing: -0.015em; line-height: 1.3; margin: 36px 0 12px; }
+.output-area h3 { font-size: 16px; font-weight: 600; margin: 28px 0 8px; }
+.output-area p { margin-bottom: 12px; }
+.output-area ul, .output-area ol { margin: 0 0 12px 8px; padding-left: 20px; }
+.output-area li::marker { color: var(--paper-muted); }
+.output-area a { color: var(--paper-accent) !important; }
+.output-area table { border-collapse: collapse; margin: 16px 0; white-space: normal; font-variant-numeric: tabular-nums; }
+.output-area th, .output-area td { border: 1px solid var(--paper-line); padding: 6px 10px; text-align: left; vertical-align: top; }
+.output-area th { font-weight: 500; }
+.output-area code { font-family: var(--font-mono); font-size: 0.88em; }
+.output-area > :first-child { margin-top: 0; }
+
+.empty-state {
+  height: 100%; min-height: 360px; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 12px; text-align: center; white-space: normal;
+}
+.empty-formula { color: var(--paper-muted) !important; opacity: .6; font-size: 20px; }
+.empty-formula .katex { color: inherit; }
+.empty-caption { font-size: 14px; color: var(--paper-muted) !important; }
 
 /* ---------- status bar ---------- */
 .statusbar {
-  height: 28px; flex-shrink: 0; display: flex; align-items: center; gap: 16px;
-  padding: 0 24px; background: var(--surface); border-top: 1px solid var(--line);
+  height: 40px; flex-shrink: 0; display: flex; align-items: center; gap: 20px; padding: 0 24px;
+  font-family: var(--font-mono); font-size: 12px; color: var(--p-muted); font-variant-numeric: tabular-nums;
 }
-.status-item { font-family: var(--mono); font-size: 11px; color: var(--text-3); display: flex; align-items: center; gap: 8px; font-variant-numeric: tabular-nums; }
+.status-item { display: flex; align-items: center; gap: 8px; }
 .status-item.end { margin-left: auto; }
+.status-sep { width: 1px; height: 12px; background: var(--line-hi); }
 
 /* ---------- toast ---------- */
 .toast {
-  position: fixed; bottom: 48px; left: 50%; transform: translate(-50%, 8px); z-index: 1000;
-  height: 36px; padding: 0 16px; display: flex; align-items: center; gap: 8px;
-  background: var(--raised); color: var(--text); border: 1px solid var(--line-hi); border-radius: 8px;
-  font-size: 13px; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  position: fixed; bottom: 56px; left: 50%; transform: translate(-50%, 6px); z-index: 1000;
+  height: 40px; padding: 0 16px 0 14px; display: flex; align-items: center; gap: 10px;
+  background: var(--p-inv-bg); color: var(--p-inv-ink); border-radius: var(--r-pill);
+  font-size: 14px; font-weight: 500; box-shadow: 0 12px 32px -8px rgba(0, 0, 0, 0.5);
   opacity: 0; pointer-events: none;
-  transition: opacity var(--slow) var(--ease), transform var(--slow) var(--ease);
+  transition: opacity var(--m-panel) var(--ease), transform var(--m-panel) var(--ease);
 }
 .toast.show { opacity: 1; transform: translate(-50%, 0); }
-.toast .state-dot { flex-shrink: 0; }
+.toast .state-dot { box-shadow: none; }
+.toast .state-dot[data-state="ok"] { background: var(--paper-accent); }
+.toast .state-dot[data-state="error"] { background: #a8402f; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition-property: opacity, color, background-color, border-color !important; }
+  .btn:active { transform: none; }
+}
 
 /* ---------- small screens ---------- */
-@media (max-width: 720px) {
-  .topbar { padding: 0 8px 0 16px; }
-  .btn .label-long { display: none; }
-  .workspace { flex-direction: column; }
-  .pane { flex: 1 1 50% !important; width: auto !important; }
-  .pane + .divider { display: none; }
-  #paneRight { border-top: 1px solid var(--line); }
-  .pane-header { padding: 0 16px; }
+@media (max-width: 760px) {
+  .topbar { height: 56px; padding: 0 12px 0 16px; }
+  .logo-sub, .label-long, .panel-hint { display: none; }
+  .btn { height: 44px; }
+  .btn--sm { height: 36px; }
+  .workspace { flex-direction: column; padding: 0 8px; }
+  .panel { flex: 1 1 50% !important; width: auto !important; }
+  .divider { width: auto; height: 8px; cursor: default; }
+  .divider::after { display: none; }
   .input-area { padding: 16px; }
-  .preview { padding: 16px; }
+  .preview { padding: 12px; }
   .output-area { padding: 32px 24px; }
-  .statusbar { padding: 0 16px; }
-  .pane-meta { display: none; }
+  .output-area .katex-display { margin: 16px -12px; padding: 12px; }
+  .statusbar { padding: 0 16px; height: 36px; }
+  .input-empty { gap: 12px; }
+  .input-empty-text { display: none; }
+}
+@media (max-width: 400px) {
+  .topbar { gap: 4px; }
+  .logo-word { font-size: 16px; }
+  .label-clear { display: none; }
+  .btn--quiet { width: 44px; padding: 0; }
 }
 </style>
 </head>
 <body>
 
-<div class="topbar">
-  <div class="logo">LaTeX Viewer</div>
+<header class="topbar">
+  <h1 class="logo"><span class="logo-word">LaTeX<b>·</b>Viewer</span><span class="logo-sub">vzorce z AI do Wordu</span></h1>
   <div class="topbar-spacer"></div>
-  <button class="btn" onclick="clearAll()">Vymazať</button>
-  <button class="btn primary" onclick="copyForWord()">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+  <button class="btn btn--quiet" onclick="clearAll()" aria-label="Vymazať">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+    <span class="label-clear">Vymazať</span>
+  </button>
+  <button class="btn btn--primary" id="copyBtn" onclick="copyForWord()">
+    <span class="ico-swap" aria-hidden="true">
+      <svg class="ico-copy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+      <svg class="ico-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+    </span>
     <span>Kopírovať<span class="label-long"> pre Word</span></span>
   </button>
-</div>
+</header>
 
-<div class="workspace" id="workspace">
-  <div class="pane" id="paneLeft">
-    <div class="pane-header">
+<main class="workspace" id="workspace">
+  <section class="panel" id="paneLeft" aria-label="Vstup">
+    <div class="panel-head">
       <span class="state-dot" id="inputIndicator" data-state="empty"></span>
-      <span class="pane-label">Vstup</span>
-      <span class="pane-meta"><kbd>Ctrl</kbd><kbd>V</kbd></span>
+      <span class="panel-title">Vstup</span>
+      <span class="panel-hint">markdown + LaTeX</span>
     </div>
-    <div class="input-area" id="inputArea" contenteditable="true" spellcheck="false" data-placeholder="Vlož text z ChatGPT, Gemini alebo Clauda"></div>
-  </div>
+    <div class="input-wrap" id="inputWrap">
+      <div class="input-area" id="inputArea" contenteditable="true" spellcheck="false" role="textbox" aria-multiline="true" aria-label="Vstupný text"></div>
+      <div class="input-empty">
+        <div class="input-empty-keys"><kbd>Ctrl</kbd><span>+</span><kbd>V</kbd></div>
+        <div class="input-empty-title">Vlož odpoveď z AI</div>
+        <p class="input-empty-text">Skopíruj text z ChatGPT, Gemini alebo Clauda aj so vzorcami. Vpravo uvidíš vykreslené vzorce a jedným klikom ich skopíruješ do Wordu.</p>
+        <button class="btn btn--sm" onclick="loadSample()">Skúsiť ukážku</button>
+      </div>
+    </div>
+  </section>
 
-  <div class="divider" id="divider" role="separator" aria-orientation="vertical" tabindex="0"></div>
+  <div class="divider" id="divider" role="separator" aria-orientation="vertical" aria-label="Zmeniť šírku panelov" tabindex="0"></div>
 
-  <div class="pane" id="paneRight">
-    <div class="pane-header">
-      <span class="pane-label">Náhľad</span>
+  <section class="panel" id="paneRight" aria-label="Náhľad">
+    <div class="panel-head">
+      <span class="panel-title">Náhľad</span>
+      <span class="panel-hint">vykreslené vzorce</span>
     </div>
     <div class="preview">
       <div class="output-area" id="outputArea"></div>
     </div>
-  </div>
-</div>
+  </section>
+</main>
 
-<div class="statusbar">
+<footer class="statusbar">
   <div class="status-item" id="statusState"><span class="state-dot" data-state="empty"></span><span>Prázdne</span></div>
-  <div class="status-item end" id="statusCount"></div>
-</div>
+  <span class="status-sep"></span>
+  <div class="status-item" id="statusCount">0 vzorcov</div>
+  <div class="status-item end">KaTeX → MathML</div>
+</footer>
 <div class="toast" id="toast" role="status" aria-live="polite"><span class="state-dot"></span><span class="toast-text"></span></div>
 
 <script>
@@ -249,12 +332,16 @@ if ('serviceWorker' in navigator) {
 
 let renderTimeout = null;
 const inputArea = document.getElementById('inputArea');
+const inputWrap = document.getElementById('inputWrap');
 const outputArea = document.getElementById('outputArea');
 const inputIndicator = document.getElementById('inputIndicator');
 const statusState = document.getElementById('statusState');
 const statusCount = document.getElementById('statusCount');
+const copyBtn = document.getElementById('copyBtn');
 
 const STATE_LABELS = { empty: 'Prázdne', pending: 'Vykresľujem', ok: 'Vykreslené', error: 'Chyba vo vzorci' };
+
+const SAMPLE = '<h2>Kvadratická rovnica</h2><p>Riešenie rovnice $ax^2 + bx + c = 0$ dostaneme zo vzorca</p><p>$$x_{1,2} = \\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}$$</p><p>Diskriminant $D = b^2 - 4ac$ určuje počet koreňov:</p><ul><li>ak $D &gt; 0$, rovnica má dva reálne korene,</li><li>ak $D = 0$, má jeden dvojnásobný koreň,</li><li>ak $D &lt; 0$, nemá reálne korene.</li></ul><h2>Príklad</h2><p>Pre $x^2 - 5x + 6 = 0$ je $D = 25 - 24 = 1$, takže</p><p>$$x_1 = 3, \\quad x_2 = 2$$</p>';
 
 function setState(state, label) {
   inputIndicator.dataset.state = state;
@@ -268,21 +355,27 @@ function plural(n, one, few, many) {
   return many;
 }
 
+function syncEmpty() {
+  inputWrap.classList.toggle('has-text', !!inputArea.innerText.trim());
+}
+
 function showEmpty() {
   outputArea.innerHTML = '<div class="empty-state"><div class="empty-formula" id="emptyFormula"></div><div class="empty-caption">Tu sa zobrazí text s vykreslenými vzorcami</div></div>';
   try {
     katex.render('\\int_0^1 x^2\\,dx = \\frac{1}{3}', document.getElementById('emptyFormula'), { displayMode: true, throwOnError: false });
   } catch (e) {}
-  statusCount.textContent = '';
+  statusCount.textContent = '0 vzorcov';
 }
 
 inputArea.addEventListener('input', () => {
+  syncEmpty();
   clearTimeout(renderTimeout);
   setState('pending');
   renderTimeout = setTimeout(render, 300);
 });
 
 function render() {
+  syncEmpty();
   const rawHTML = inputArea.innerHTML;
   if (!inputArea.innerText.trim()) {
     showEmpty();
@@ -291,24 +384,35 @@ function render() {
   }
 
   outputArea.innerHTML = rawHTML;
+  let failed = 0;
   try {
     renderMathInElement(outputArea, {
+      // auto-render nechá nevykreslený vzorec ako text a ohlási ho sem
+      errorCallback: (msg, err) => { failed++; console.warn(msg, err); },
       delimiters: [
         { left: '$$', right: '$$', display: true },
         { left: '\\[', right: '\\]', display: true },
         { left: '$', right: '$', display: false },
         { left: '\\(', right: '\\)', display: false }
       ],
-      throwOnError: false, trust: true, output: 'htmlAndMathml'
+      throwOnError: false, errorColor: '#cc0000', trust: true, output: 'htmlAndMathml'
     });
     const total = outputArea.querySelectorAll('.katex').length;
-    const errors = outputArea.querySelectorAll('.katex-error').length;
+    // neznámy príkaz (napr. \sqrtt) KaTeX nevyhodí, len ho vypíše červenou (errorColor)
+    const unknown = [...outputArea.querySelectorAll('.katex')].filter(k => k.querySelector('.katex-mathml mstyle[mathcolor="#cc0000"]')).length;
+    const errors = failed + unknown + outputArea.querySelectorAll('.katex-error').length;
     statusCount.textContent = total + ' ' + plural(total, 'vzorec', 'vzorce', 'vzorcov');
     if (errors) setState('error', errors + ' ' + plural(errors, 'chyba', 'chyby', 'chýb') + ' vo vzorcoch');
     else setState('ok');
   } catch(e) {
     setState('error');
   }
+}
+
+function loadSample() {
+  inputArea.innerHTML = SAMPLE;
+  render();
+  inputArea.focus();
 }
 
 async function copyForWord() {
@@ -353,6 +457,8 @@ async function copyForWord() {
     const clipboardItem = new ClipboardItem({ 'text/html': blobHtml, 'text/plain': blobText });
     await navigator.clipboard.write([clipboardItem]);
     showToast('Skopírované, vlož do Wordu cez Ctrl+V', 'ok');
+    copyBtn.classList.add('is-done');
+    setTimeout(() => copyBtn.classList.remove('is-done'), 1800);
   } catch (err) {
     showToast('Kopírovanie zlyhalo', 'error');
     console.error('Clipboard error:', err);
@@ -377,14 +483,15 @@ let dragging = false;
 
 function setLeftWidth(px) {
   const rect = workspace.getBoundingClientRect();
-  const left = Math.max(200, Math.min(px, rect.width - 200));
+  const left = Math.max(280, Math.min(px, rect.width - 320));
   paneLeft.style.flex = 'none'; paneLeft.style.width = left + 'px';
 }
 
 divider.addEventListener('mousedown', () => { dragging = true; divider.classList.add('dragging'); document.body.style.cursor = 'col-resize'; });
 document.addEventListener('mousemove', e => {
   if (!dragging) return;
-  setLeftWidth(e.clientX - workspace.getBoundingClientRect().left);
+  // 12px okraj pracovnej plochy + polovica 12px deliča
+  setLeftWidth(e.clientX - workspace.getBoundingClientRect().left - 18);
 });
 document.addEventListener('mouseup', () => { dragging = false; divider.classList.remove('dragging'); document.body.style.cursor = ''; });
 divider.addEventListener('keydown', e => {

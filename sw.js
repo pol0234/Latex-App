@@ -1,4 +1,4 @@
-const CACHE_NAME = 'latex2word-v2';
+const CACHE_NAME = 'latex2word-v3';
 const urlsToCache = [
   './',
   './index.html',
